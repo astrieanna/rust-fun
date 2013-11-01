@@ -8,56 +8,43 @@ fn sqr(x:int) -> int {
 
 
 fn pmap(fun: extern fn(~str) -> uint, myvect:~[~str]) {
-        let (parent_port1, child_chan1) = stream();
-        let (child_port1, parent_chan1) = stream();
-        let (parent_port2, child_chan2) = stream();
-        let (child_port2, parent_chan2) = stream();
-        
-	do spawn {
+
+        let ports_chans = do std::vec::from_fn(3) |init_val| {
+          let (pport, cchan) = stream();
+          let (cport, pchan) = stream();
+          do spawn {
 		loop {
-                        match child_port1.try_recv() {
-			    Some(s) => child_chan1.send(fun(s)),
+                        match cport.try_recv() {
+			    Some(s) => cchan.send(fun(s)),
                             None => break
                         }
 		}
-	}
-
-	do spawn {
-		loop {
-                        match child_port2.try_recv() {
-			    Some(s) => child_chan2.send(fun(s)),
-                            None => break
-                        }
-		}
-	}
-
+          }
+          (pport,pchan)
+        };
+       
         do spawn {
 	for iptr in myvect.iter() {
 		let s = (*iptr).to_owned();
 		let t = s.clone();
                 let i = rand::random::<uint>();
-		
-                match i % 2 {
-                  0 => parent_chan1.send(s),
-		  1 => parent_chan2.send(t),
-                  j => fail!("{:u} % 2 = {:u}",i,j)
-                }
+	
+                match ports_chans[i % 2] {
+                  (_,chan) => chan.send(s)
+                }	
 	}
         }
 
-        println("working on parent1");
-        loop {
-          match parent_port1.try_recv() {
-           Some(v) => println(format!("{:u}",v)),
-           None => break
+        for &(port,_) in ports_chans.iter() {
+
+          println("working on parent1");
+          loop {
+            match port.try_recv() {
+             Some(v) => println(format!("{:u}",v)),
+             None => break
+            }
           }
-        }
-        println("working on parent2");
-        loop {
-          match parent_port2.try_recv() {
-           Some(v) => println(format!("{:u}",v)),
-           None => break
-          }
+
         }
 }
 
