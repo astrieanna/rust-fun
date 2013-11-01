@@ -8,35 +8,15 @@ fn sqr(x:int) -> int {
 
 
 fn pmap(fun: extern fn(~str) -> uint, myvect:~[~str]) {
-
-        let ports_chans = do std::vec::from_fn(3) |init_val| {
+        let ports = for initval in myvect.iter() {
           let (pport, cchan) = stream();
-          let (cport, pchan) = stream();
           do spawn {
-		loop {
-                        match cport.try_recv() {
-			    Some(s) => cchan.send(fun(s)),
-                            None => break
-                        }
-		}
+	    cchan.send(fun(*initval))
           }
-          (pport,pchan)
+          pport
         };
        
-        do spawn {
-	for iptr in myvect.iter() {
-		let s = (*iptr).to_owned();
-		let t = s.clone();
-                let i = rand::random::<uint>();
-	
-                match ports_chans[i % 2] {
-                  (_,chan) => chan.send(s)
-                }	
-	}
-        }
-
-        for &(port,_) in ports_chans.iter() {
-
+        for port in ports.iter() {
           println("working on parent1");
           loop {
             match port.try_recv() {
