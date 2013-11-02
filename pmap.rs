@@ -8,13 +8,13 @@ fn sqr(x:int) -> int {
 
 
 fn pmap(fun: extern fn(~str) -> uint, myvect:~[~str]) {
-        let ports = for initval in myvect.iter() {
+        let ports = do myvect.move_iter().map |s| { 
           let (pport, cchan) = stream();
           do spawn {
-	    cchan.send(fun(*initval))
+	    cchan.send(fun(s))
           }
           pport
-        };
+        }.to_owned_vec();
        
         for port in ports.iter() {
           println("working on parent1");
