@@ -1,6 +1,6 @@
 extern mod extra;
 extern mod std;
-use std::rand;
+use std::task::spawn_with;
 
 fn sqr(x:int) -> int {
 	return x*x;
@@ -10,7 +10,7 @@ fn sqr(x:int) -> int {
 fn pmap(fun: extern fn(~str) -> uint, myvect:~[~str]) {
         let ports = do myvect.move_iter().map |s| { 
           let (pport, cchan) = stream();
-          do spawn {
+          do spawn_with(s) |s| {
 	    cchan.send(fun(s))
           }
           pport
